@@ -26,7 +26,7 @@ jobs:
   deploy:
     environment:
       name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+      url: ${{ steps.deployment.outputs.page_url || steps.deployment-retry.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -39,6 +39,18 @@ jobs:
           # Upload only the docs folder: index.html is served at the root,
           # 404.html for any not-found route, and any PNGs or PDFs as-is
           path: 'docs'
+      # deploy-pages sometimes cannot yet see an artifact uploaded moments
+      # before ("No artifacts named github-pages"), or fails with "Deployment
+      # failed, try again later". Both are transient, so wait and try once more.
+      # https://github.com/actions/deploy-pages/issues/451
       - name: Deploy to GitHub Pages
         id: deployment
+        continue-on-error: true
+        uses: actions/deploy-pages@v5
+      - name: Wait before retrying the deploy
+        if: steps.deployment.outcome == 'failure'
+        run: sleep 30
+      - name: Deploy to GitHub Pages (retry)
+        id: deployment-retry
+        if: steps.deployment.outcome == 'failure'
         uses: actions/deploy-pages@v5
