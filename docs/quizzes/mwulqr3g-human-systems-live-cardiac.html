@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Human Systems Live! Cardiac Lab Special</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Exo+2:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --void: #021f52;
+  --deep: #0a3270;
+  --holo: #6ff4ff;
+  --holo-dim: rgba(111, 244, 255, .42);
+  --holo-faint: rgba(111, 244, 255, .1);
+  --ink: #e6fdff;
+  --muted: #9fcad6;
+  --panel: rgba(8, 52, 120, .45);
+  --opt: rgba(111, 244, 255, .07);
+  --artery: #ff5a78;
+  --vein: #5a96ff;
+  --good: #66ffb8;
+  --bad: #ff5a78;
+  --gold: #ffd36b;
+  --silver: #d3dee8;
+  --bronze: #eda26a;
+  --trace: #6ff4ff;
+  color-scheme: dark;
+  box-sizing: border-box;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --void: #021f52; --deep: #0a3270; --panel: rgba(8, 52, 120, .45); --opt: rgba(95, 243, 255, .06);
+    --holo: #5ff3ff; --holo-dim: rgba(95, 243, 255, .38); --holo-faint: rgba(95, 243, 255, .08); --trace: #5ff3ff;
+  }
+}
+:root[data-theme="dark"] {
+  --void: #021f52; --deep: #0a3270; --panel: rgba(8, 52, 120, .45); --opt: rgba(95, 243, 255, .06);
+  --holo: #5ff3ff; --holo-dim: rgba(95, 243, 255, .38); --holo-faint: rgba(95, 243, 255, .08); --trace: #5ff3ff;
+}
+*, *::before, *::after { box-sizing: inherit; }
+html, body { height: 100%; margin: 0; overflow: hidden; }
+body { background: var(--void); color: var(--ink); font-family: "Exo 2", "Segoe UI", system-ui, sans-serif; font-size: 18px; line-height: 1.35; }
+#viewport { position: fixed; inset: env(safe-area-inset-top, 0px) 0 env(safe-area-inset-bottom, 0px) 0; overflow: hidden; }
+#app {
+  position: absolute; left: 50%; top: 50%; width: 1280px; height: 720px;
+  transform: translate(-50%, -50%) scale(var(--s, 1)); transform-origin: center;
+  overflow: hidden; isolation: isolate;
+  background:
+    radial-gradient(ellipse 70% 60% at 50% 45%, color-mix(in srgb, var(--holo) 14%, transparent), transparent 70%),
+    linear-gradient(var(--holo-faint) 1px, transparent 1px) 0 0 / 40px 40px,
+    linear-gradient(90deg, var(--holo-faint) 1px, transparent 1px) 0 0 / 40px 40px,
+    linear-gradient(var(--deep), var(--void));
+}
+#app::before, #app::after { content: ""; position: absolute; width: 46px; height: 46px; border: 2px solid var(--holo); z-index: 40; pointer-events: none; filter: drop-shadow(0 0 6px var(--holo)); }
+#app::before { top: 10px; left: 10px; border-right: 0; border-bottom: 0; }
+#app::after { bottom: 10px; right: 10px; border-left: 0; border-top: 0; }
+.scan { position: absolute; inset: 0; z-index: 35; pointer-events: none;
+  background: repeating-linear-gradient(rgba(255,255,255,.035) 0 1px, transparent 1px 3px); }
+.scan::after { content: ""; position: absolute; left: 0; right: 0; height: 140px; top: -140px;
+  background: linear-gradient(transparent, color-mix(in srgb, var(--holo) 9%, transparent), transparent);
+  animation: sweep 7s linear infinite; }
+@keyframes sweep { to { transform: translateY(1000px); } }
+#confetti { position: fixed; inset: 0; pointer-events: none; z-index: 80; }
+#dim { position: absolute; inset: 0; background: rgba(0, 4, 10, .6); opacity: 0; pointer-events: none; transition: opacity .8s; z-index: 5; }
+#dim.on { opacity: 1; }
+.display { font-family: "Chakra Petch", "Segoe UI", sans-serif; font-weight: 700; line-height: 1; letter-spacing: .02em; }
+.glow { text-shadow: 0 0 14px color-mix(in srgb, currentColor 60%, transparent); }
+
+/* HUD */
+.hud { position: absolute; top: 0; left: 0; right: 0; height: 62px; z-index: 20; display: flex; align-items: center; gap: 18px; padding: 0 30px 0 70px;
+  border-bottom: 1px solid var(--holo-dim); background: linear-gradient(color-mix(in srgb, var(--holo) 8%, transparent), transparent); }
+.logo { font-size: 24px; color: var(--holo); white-space: nowrap; text-shadow: 0 0 12px var(--holo); }
+.round-name { color: var(--muted); font-weight: 600; flex: 1; font-size: 16px; }
+.scorebox { display: flex; align-items: baseline; gap: 8px; }
+.scorebox span { color: var(--muted); font-size: 14px; letter-spacing: .08em; }
+.score { font-size: 34px; color: var(--ink); min-width: 3.5ch; text-align: right; font-variant-numeric: tabular-nums; text-shadow: 0 0 12px var(--holo); }
+.score.up { animation: up .6s ease; } .score.down { animation: down .6s ease; }
+@keyframes up { 40% { transform: scale(1.3); color: var(--good); } }
+@keyframes down { 40% { transform: scale(1.3); color: var(--bad); } }
+.medalbar { width: 200px; position: relative; height: 6px; background: var(--holo-faint); border: 1px solid var(--holo-dim); }
+.medalbar .fill { position: absolute; inset: 0 auto 0 0; width: 0; background: var(--holo); box-shadow: 0 0 10px var(--holo); transition: width .8s ease; }
+.medalbar i { position: absolute; top: 50%; width: 12px; height: 12px; transform: translate(-50%, -50%) rotate(45deg); box-shadow: 0 0 8px currentColor; }
+.icon-btn { border: 1px solid var(--holo-dim); background: var(--opt); color: var(--holo); width: 38px; height: 38px; font-size: 16px; cursor: pointer;
+  clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px); }
+
+/* Stage */
+#stage { position: absolute; top: 62px; bottom: 76px; left: 0; right: 0; z-index: 10; padding: 18px 40px; }
+.panel {
+  position: relative; height: 100%; overflow: hidden; padding: 24px 34px;
+  background: var(--panel); border: 1px solid var(--holo-dim);
+  clip-path: polygon(22px 0, 100% 0, 100% calc(100% - 22px), calc(100% - 22px) 100%, 0 100%, 0 22px);
+  box-shadow: inset 0 0 60px color-mix(in srgb, var(--holo) 10%, transparent), inset 0 0 0 1px color-mix(in srgb, var(--holo) 12%, transparent);
+  display: flex; flex-direction: column;
+}
+.panel.center { justify-content: center; }
+.enter { animation: materialise .55s ease-out; }
+@keyframes materialise { 0% { opacity: 0; filter: blur(6px) brightness(1.8); transform: scaleY(.96); } 40% { opacity: .7; } 55% { opacity: .35; } 100% { opacity: 1; filter: none; transform: none; } }
+.center { text-align: center; }
+.kicker { color: var(--holo); font-weight: 600; font-size: 17px; letter-spacing: .1em; margin: 0 0 8px; }
+.title-xl { font-size: 104px; margin: 0; color: var(--ink); text-shadow: 0 0 22px color-mix(in srgb, var(--holo) 70%, transparent); }
+.brand { display: grid; justify-items: center; gap: 4px; margin: 0 0 2px; }
+.brand-top { font-size: 42px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink); text-shadow: 0 0 18px color-mix(in srgb, var(--holo) 70%, transparent); }
+.brand-academy { display: flex; align-items: center; gap: 14px; color: var(--holo); font-size: 15px; letter-spacing: .4em; font-weight: 600; margin-top: -4px; text-transform: uppercase; }
+.brand-academy::before, .brand-academy::after { content: ""; width: 64px; height: 1px; background: var(--holo); box-shadow: 0 0 6px var(--holo); }
+.live-plate { display: flex; align-items: center; gap: 26px; padding: 8px 34px; margin-top: 8px; border-radius: 16px;
+  background: linear-gradient(#ff3d5e, #a8102c); border: 2px solid #ffd3db;
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--holo) 55%, transparent), 0 0 40px rgba(255, 70, 100, .65); animation: platebeat 1.1s ease-in-out infinite; }
+.live-plate span { font-size: 92px; text-transform: uppercase; font-style: italic; color: #fff; line-height: 1; padding-right: .08em; text-shadow: 0 4px 0 rgba(60, 0, 10, .35), 0 0 22px rgba(255, 255, 255, .55); }
+.lights { display: grid; grid-template-columns: repeat(2, 12px); gap: 10px; }
+.lights i { width: 12px; height: 12px; border-radius: 50%; background: var(--holo); box-shadow: 0 0 10px var(--holo); animation: blink 1.2s steps(2) infinite; }
+.lights i:nth-child(even) { animation-delay: .6s; }
+@keyframes blink { 50% { opacity: .25; } }
+@keyframes platebeat { 0%, 30%, 100% { transform: scale(1); } 10% { transform: scale(1.035); } 20% { transform: scale(1.01); } }
+.special { display: flex; align-items: center; gap: 16px; padding: 7px 24px; margin-top: 2px; border-radius: 8px;
+  background: color-mix(in srgb, #a8102c 75%, transparent); border: 1px solid var(--holo); box-shadow: 0 0 18px color-mix(in srgb, var(--holo) 45%, transparent); }
+.special span { font-size: 28px; color: #fff; letter-spacing: .05em; text-transform: uppercase; }
+.brand + .host { max-width: 960px; margin: 10px auto 6px; }
+.special svg { width: 64px; height: 24px; overflow: visible; }
+.special path { fill: none; stroke: #ff8aa0; stroke-width: 2; stroke-linejoin: round; filter: drop-shadow(0 0 4px #ff5a78); }
+@keyframes beat { 0%, 30%, 100% { transform: scale(1); } 10% { transform: scale(1.18); } 20% { transform: scale(1.05); } }
+.title-l { font-size: 62px; margin: 0 0 10px; text-shadow: 0 0 18px color-mix(in srgb, var(--holo) 60%, transparent); }
+.host { font-size: 20px; max-width: 760px; margin: 12px auto; }
+.small { color: var(--muted); font-size: 15px; }
+.medals-key { display: flex; gap: 22px; justify-content: center; margin: 14px 0 0; color: var(--muted); font-weight: 600; }
+.dot { display: inline-block; width: 11px; height: 11px; transform: rotate(45deg); margin-right: 8px; box-shadow: 0 0 8px currentColor; }
+
+.btn {
+  font: inherit; font-family: "Chakra Petch", sans-serif; font-weight: 700; font-size: 18px; letter-spacing: .04em; cursor: pointer;
+  padding: 12px 26px; border: 1px solid var(--holo-dim); background: var(--opt); color: var(--holo);
+  clip-path: polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px);
+  transition: background .15s, transform .12s;
+}
+.btn:hover:not(:disabled) { background: color-mix(in srgb, var(--holo) 18%, transparent); }
+.btn:disabled { opacity: .35; cursor: default; }
+.btn.go { background: var(--holo); color: var(--void); border-color: var(--holo); font-size: 20px; padding: 14px 34px; box-shadow: 0 0 22px var(--holo); }
+.btn.go:hover:not(:disabled) { background: color-mix(in srgb, var(--holo) 85%, #fff); }
+.btn:focus-visible, .icon-btn:focus-visible, .opt:focus-visible, .tile:focus-visible, .chip:focus-visible, .station:focus-visible, input:focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; }
+.row { display: flex; gap: 14px; flex-wrap: wrap; align-items: center; }
+.row.c { justify-content: center; }
+.mt { margin-top: 18px; }
+
+/* Question */
+.qhead { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 6px; }
+.qcat { color: var(--holo); font-weight: 600; font-size: 17px; letter-spacing: .06em; }
+.timer { position: relative; width: 62px; height: 62px; flex-shrink: 0; }
+.timer svg { width: 100%; height: 100%; transform: rotate(-90deg); filter: drop-shadow(0 0 6px var(--holo)); }
+.timer circle { fill: none; stroke-width: 5; }
+.timer .bg { stroke: var(--holo-faint); }
+.timer .fg { stroke: var(--holo); transition: stroke-dashoffset 1s linear; }
+.timer b { position: absolute; inset: 0; display: grid; place-items: center; font-family: "Chakra Petch", sans-serif; font-size: 24px; }
+.timer.low b { color: var(--bad); } .timer.low .fg { stroke: var(--bad); }
+.question { font-size: 30px; font-weight: 600; line-height: 1.22; margin: 4px 0 18px; }
+.opts { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.opt {
+  font: inherit; font-weight: 600; font-size: 20px; color: var(--ink); text-align: left; cursor: pointer;
+  background: var(--opt); border: 1px solid var(--holo-dim); padding: 12px 16px; display: flex; gap: 14px; align-items: center;
+  clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
+  transition: background .15s, border-color .15s;
+}
+.opt .k { font-family: "Chakra Petch", sans-serif; font-weight: 700; width: 34px; height: 34px; flex-shrink: 0; display: grid; place-items: center; border: 1px solid var(--holo-dim); color: var(--holo); }
+.opt:hover:not(:disabled) { background: color-mix(in srgb, var(--holo) 14%, transparent); }
+.opt.sel { border-color: var(--holo); background: color-mix(in srgb, var(--holo) 22%, transparent); box-shadow: inset 0 0 18px color-mix(in srgb, var(--holo) 30%, transparent); }
+.opt.sel .k { background: var(--holo); color: var(--void); }
+.opt.right { border-color: var(--good); background: color-mix(in srgb, var(--good) 20%, transparent); }
+.opt.right .k { background: var(--good); color: var(--void); border-color: var(--good); }
+.opt.wrong { border-color: var(--bad); background: color-mix(in srgb, var(--bad) 20%, transparent); animation: shake .45s; }
+.opt.out { opacity: .35; text-decoration: line-through; }
+.opt:disabled { cursor: default; }
+@keyframes shake { 20%, 60% { transform: translateX(-7px); } 40%, 80% { transform: translateX(7px); } }
+.why { margin-top: 14px; padding: 12px 16px; border-left: 3px solid var(--holo); background: var(--opt); font-size: 17px; }
+.why strong { display: block; font-size: 20px; margin-bottom: 2px; font-family: "Chakra Petch", sans-serif; }
+.why .g { color: var(--good); } .why .b { color: var(--bad); }
+
+/* Pulse check */
+.tf { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+.tf .opt { justify-content: center; font-family: "Chakra Petch", sans-serif; font-weight: 700; font-size: 52px; padding: 22px; }
+.pc-top { display: flex; justify-content: space-between; align-items: center; }
+.pc-clock { font-size: 72px; color: var(--holo); text-shadow: 0 0 18px var(--holo); font-variant-numeric: tabular-nums; }
+.pc-count { font-weight: 600; color: var(--muted); font-size: 20px; }
+.flashfix { min-height: 30px; margin-top: 16px; font-weight: 600; text-align: center; font-size: 19px; }
+
+/* Board */
+.board { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.cat { font-weight: 700; text-align: center; padding: 10px 8px; font-size: 18px; display: grid; place-items: center; min-height: 64px; line-height: 1.15;
+  color: var(--void); background: var(--holo); box-shadow: 0 0 16px color-mix(in srgb, var(--holo) 60%, transparent);
+  clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px); }
+.tile { font-family: "Chakra Petch", sans-serif; font-weight: 700; font-size: 44px; color: var(--holo); background: var(--opt); border: 1px solid var(--holo-dim); height: 96px; cursor: pointer;
+  text-shadow: 0 0 14px var(--holo); clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px); transition: background .15s; }
+.tile:hover:not(:disabled) { background: color-mix(in srgb, var(--holo) 18%, transparent); }
+.tile:disabled { color: transparent; text-shadow: none; background: transparent; border-style: dashed; border-color: var(--holo-faint); cursor: default; }
+.picks { font-weight: 600; color: var(--muted); }
+.splash { font-size: 92px; color: var(--artery); text-shadow: 0 0 26px var(--artery); animation: splash 1s ease; }
+@keyframes splash { 0% { transform: scale(.3); opacity: 0; filter: blur(8px); } 60% { transform: scale(1.1); opacity: 1; filter: none; } }
+.wager { display: grid; gap: 12px; justify-items: center; margin-top: 8px; }
+.wager input[type=range] { width: 480px; accent-color: var(--holo); height: 26px; }
+.wager .amt { font-size: 64px; color: var(--holo); text-shadow: 0 0 18px var(--holo); }
+.chip { font: inherit; font-weight: 600; font-size: 16px; border: 1px solid var(--holo-dim); background: var(--opt); color: var(--ink); padding: 6px 16px; cursor: pointer; }
+
+/* Route */
+.route-wrap { position: relative; }
+.track { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; min-height: 64px; padding: 12px; border: 1px dashed var(--holo-dim); position: relative; }
+.station { font: inherit; font-weight: 600; font-size: 17px; padding: 8px 14px; background: var(--opt); border: 1px solid var(--holo-dim); cursor: pointer; color: var(--ink);
+  clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px); }
+.station.fixed { background: color-mix(in srgb, var(--holo) 22%, transparent); cursor: default; color: var(--holo); }
+.station.ok { border-color: var(--good); background: color-mix(in srgb, var(--good) 18%, transparent); }
+.station.bad { border-color: var(--bad); background: color-mix(in srgb, var(--bad) 22%, transparent); animation: shake .45s; }
+.arrow { color: var(--holo); opacity: .7; }
+.pool { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.cell { position: absolute; width: 22px; height: 22px; border-radius: 50%; background: var(--vein); box-shadow: 0 0 0 4px color-mix(in srgb, var(--vein) 30%, transparent), 0 0 22px var(--vein); transform: translate(-50%, -50%); transition: left .5s ease-in-out, top .5s ease-in-out, background .4s, box-shadow .4s; z-index: 3; pointer-events: none; }
+.cell.oxy { background: var(--artery); box-shadow: 0 0 0 4px color-mix(in srgb, var(--artery) 30%, transparent), 0 0 22px var(--artery); }
+.legend { display: flex; gap: 22px; color: var(--muted); font-size: 15px; margin-top: 10px; }
+.legend .dot { border-radius: 50%; transform: none; }
+
+/* Diagnosis */
+.case { display: grid; grid-template-columns: 1.1fr 1fr; gap: 24px; flex: 1; min-height: 0; }
+.chart { border: 1px solid var(--holo-dim); background: var(--opt); padding: 14px 18px; display: flex; flex-direction: column; }
+.chart h3 { margin: 0 0 6px; font-size: 16px; color: var(--holo); letter-spacing: .08em; font-weight: 600; }
+.clue { padding: 7px 0; border-top: 1px dashed var(--holo-dim); font-size: 17px; animation: materialise .45s ease-out; }
+.clue:first-of-type { border-top: 0; }
+.clue b { color: var(--holo); margin-right: 6px; font-family: "Chakra Petch", sans-serif; }
+.case .opts { grid-template-columns: 1fr; gap: 9px; }
+.case .opt { font-size: 18px; padding: 9px 14px; }
+.case .opt .k { width: 30px; height: 30px; }
+.case .why { font-size: 16px; }
+.avail { font-size: 46px; color: var(--holo); text-shadow: 0 0 16px var(--holo); }
+
+/* Results */
+.medal { width: 124px; height: 124px; margin: 10px auto; display: grid; place-items: center; font-family: "Chakra Petch", sans-serif; font-weight: 700; font-size: 26px; color: var(--void);
+  clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%); animation: splash .9s ease; }
+.recap { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-top: 14px; text-align: left; }
+.recap div { background: var(--opt); border: 1px solid var(--holo-dim); padding: 8px 12px; }
+.recap b { display: block; font-family: "Chakra Petch", sans-serif; font-size: 28px; color: var(--holo); }
+
+/* ECG */
+.ecg { position: absolute; left: 0; right: 0; bottom: 0; height: 76px; z-index: 30; border-top: 1px solid var(--holo-dim); background: linear-gradient(transparent, color-mix(in srgb, var(--holo) 6%, transparent)); }
+.ecg canvas { width: 100%; height: 76px; display: block; }
+.ecg .bpm { position: absolute; right: 72px; top: 8px; font-family: "Chakra Petch", sans-serif; font-weight: 700; color: var(--artery); font-size: 26px; text-shadow: 0 0 10px var(--artery); }
+.ecg .bpm small { font-family: "Exo 2", sans-serif; font-size: 12px; color: var(--muted); margin-left: 4px; text-shadow: none; }
+.hidden { display: none !important; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+
+.panel > .center { margin: auto 0; }
+</style>
+</head>
+<body>
+<div id="viewport"><div id="app">
+<div class="scan" aria-hidden="true"></div>
+<div id="dim" aria-hidden="true"></div>
+
+<div class="hud">
+  <span class="logo display">Human Systems Live!</span>
+  <span class="round-name" id="roundName">Cardiac Lab Special</span>
+  <div class="medalbar" id="medalbar" aria-hidden="true"><div class="fill" id="medalFill"></div></div>
+  <div class="scorebox"><span>Team</span><b class="score display" id="score">0</b></div>
+  <button class="icon-btn" id="fsBtn" aria-label="Full screen" title="Full screen">⛶</button>
+  <button class="icon-btn" id="muteBtn" aria-label="Mute sound">🔊</button>
+</div>
+
+<main id="stage"></main>
+
+<div class="ecg" aria-hidden="true">
+  <canvas id="ecg"></canvas>
+  <div class="bpm"><span id="bpm">72</span><small>BPM</small></div>
+</div>
+</div></div>
+<canvas id="confetti" aria-hidden="true"></canvas>
+
+<script>
+/* =================== CONTENT =================== */
+const MEDALS = [{ name: "Bronze", at: 1500, c: "var(--bronze)" }, { name: "Silver", at: 3000, c: "var(--silver)" }, { name: "Gold", at: 4500, c: "var(--gold)" }];
+
+const PULSE = [
+  ["The heart has four chambers.", true, "Two atria on top, two ventricles below."],
+  ["Arteries carry blood towards the heart.", false, "Arteries carry blood away from the heart."],
+  ["The left ventricle has a thicker wall than the right ventricle.", true, "It has to pump blood all around the body."],
+  ["The pulmonary artery carries oxygen-rich blood.", false, "It carries oxygen-poor blood to the lungs."],
+  ["Heart valves stop blood flowing backwards.", true, "They keep blood moving in one direction."],
+  ["Capillary walls are only one cell thick.", true, "That makes exchange with tissues quick and easy."],
+  ["The heart is mostly made of skeletal muscle.", false, "It’s made of cardiac muscle, which never tires."],
+  ["A typical adult resting heart rate is 60 to 100 beats per minute.", true, "Very fit people can be lower."],
+  ["Many veins contain valves.", true, "Especially in the legs, to help blood return against gravity."],
+  ["The right side of the heart pumps blood to the lungs.", true, "The left side pumps it to the rest of the body."],
+  ["Mature red blood cells have a nucleus.", false, "They lose it, leaving more room for haemoglobin."],
+  ["Platelets help blood to clot.", true, "They plug gaps when a vessel is damaged."],
+  ["The aorta is the largest artery in the body.", true, "It leaves the left ventricle."],
+  ["The coronary arteries supply blood to the brain.", false, "They supply the heart muscle itself."],
+  ["Plasma makes up just over half of blood’s volume.", true, "Around 55%."],
+  ["Haemoglobin carries oxygen in red blood cells.", true, "It contains iron, which binds oxygen."],
+  ["The “lub-dub” sound is made by the heart muscle squeezing.", false, "It’s made by the heart valves snapping shut."],
+  ["Blood pressure is usually written as two numbers.", true, "Systolic over diastolic, such as 120/80."]
+];
+
+const BOARD = [
+  { cat: "Chambers & valves", qs: [
+    { v: 100, q: "Which chamber pumps oxygen-rich blood out to the body?", o: ["Left ventricle", "Right ventricle", "Left atrium", "Right atrium"], a: 0, why: "The left ventricle pumps blood into the aorta and around the body." },
+    { v: 200, q: "Which valve sits between the left atrium and the left ventricle?", o: ["Mitral (bicuspid) valve", "Tricuspid valve", "Aortic valve", "Pulmonary valve"], a: 0, why: "The mitral valve has two flaps; the tricuspid, on the right, has three." },
+    { v: 300, q: "What stops the valve flaps turning inside out when the ventricles contract?", o: ["Chordae tendineae", "The septum", "The pericardium", "The sinoatrial node"], a: 0, why: "These tendon-like “heart strings” anchor the valve flaps to the ventricle walls." } ] },
+  { cat: "Blood vessels", qs: [
+    { v: 100, q: "Which vessels carry blood away from the heart?", o: ["Arteries", "Veins", "Capillaries", "Venules"], a: 0, why: "Arteries carry blood away; veins bring it back." },
+    { v: 200, q: "Where does exchange of gases between blood and tissues take place?", o: ["Capillaries", "Arteries", "Veins", "The aorta"], a: 0, why: "Capillary walls are thin enough for oxygen and carbon dioxide to pass through." },
+    { v: 300, q: "Which vessel carries oxygen-rich blood from the lungs to the heart?", o: ["Pulmonary vein", "Pulmonary artery", "Vena cava", "Aorta"], a: 0, why: "The pulmonary veins are the only veins that carry oxygen-rich blood." } ] },
+  { cat: "The blood", qs: [
+    { v: 100, q: "Which part of the blood carries oxygen?", o: ["Red blood cells", "White blood cells", "Platelets", "Plasma"], a: 0, why: "Red blood cells are packed with haemoglobin." },
+    { v: 200, q: "What is the oxygen-carrying protein in red blood cells called?", o: ["Haemoglobin", "Insulin", "Keratin", "Fibrin"], a: 0, why: "Haemoglobin contains iron, which binds to oxygen." },
+    { v: 300, q: "Which blood group is the universal donor for red cells?", o: ["O negative", "AB positive", "A negative", "B positive"], a: 0, why: "O negative red cells carry no A, B or RhD antigens, so they can be given in emergencies." } ] },
+  { cat: "Heart health", qs: [
+    { v: 100, q: "What is the medical name for high blood pressure?", o: ["Hypertension", "Hypotension", "Tachycardia", "Bradycardia"], a: 0, why: "Hypo- means low, hyper- means high." },
+    { v: 200, q: "A resting heart rate above 100 beats per minute is called…", o: ["Tachycardia", "Bradycardia", "Hypotension", "Angina"], a: 0, why: "Tachy- means fast; brady- means slow." },
+    { v: 300, q: "What rate should adult CPR chest compressions aim for?", o: ["100 to 120 per minute", "30 to 40 per minute", "60 to 80 per minute", "150 to 180 per minute"], a: 0, why: "Push hard and fast, about two compressions per second." } ] }
+];
+
+const ROUTE = ["Vena cava", "Right atrium", "Right ventricle", "Pulmonary artery", "Lungs", "Pulmonary veins", "Left atrium", "Left ventricle", "Aorta"];
+
+const CASES = [
+  { clues: ["A 58-year-old man feels suddenly unwell while gardening.",
+            "He describes a crushing, heavy pain in the centre of his chest.",
+            "The pain spreads to his left arm and jaw, and he’s sweaty and sick.",
+            "Resting for 20 minutes hasn’t eased the pain at all.",
+            "A blood test shows a raised troponin level."],
+    o: ["Heart attack (myocardial infarction)", "Stable angina", "Asthma attack", "Heartburn"], a: 0,
+    why: "Angina usually settles with rest. Pain that doesn’t, plus raised troponin (a marker of heart muscle damage), points to a heart attack: a blocked coronary artery starving the heart muscle of oxygen." },
+  { clues: ["A 72-year-old woman visits her GP feeling tired and a bit breathless.",
+            "She says her heart sometimes seems to flutter or race.",
+            "Her pulse is irregularly irregular, at about 130 beats per minute.",
+            "Her ECG shows no clear P waves.",
+            "Her doctor talks about blood thinners to lower her stroke risk."],
+    o: ["Atrial fibrillation", "Heart attack", "Anaemia", "Panic attack"], a: 0,
+    why: "In atrial fibrillation the atria quiver chaotically instead of contracting, so there are no clear P waves and the pulse is irregular. Blood can pool and clot, which is why stroke prevention matters." }
+];
+
+const FINAL = { cat: "The heart’s electrics", q: "Which structure acts as the heart’s natural pacemaker, starting each heartbeat?",
+  o: ["Sinoatrial (SA) node", "Atrioventricular (AV) node", "Bundle of His", "Purkinje fibres"], a: 0,
+  why: "The SA node in the right atrium fires first. The signal then passes through the AV node, down the bundle of His and out through the Purkinje fibres." };
+
+
+/* =================== FIT TO WINDOW =================== */
+let S = 1;
+const appEl = document.getElementById("app"), vpEl = document.getElementById("viewport");
+function fit() { S = Math.min(vpEl.clientWidth / 1280, vpEl.clientHeight / 720); appEl.style.setProperty("--s", S); }
+fit(); addEventListener("resize", fit);
+
+/* =================== UTIL & STATE =================== */
+const $ = id => document.getElementById(id);
+const stage = $("stage");
+const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+function load(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+function save(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+let score = 0, roundScores = [0, 0, 0, 0, 0], timers = [], keyHandler = null;
+function later(fn, ms) { const t = setTimeout(fn, ms); timers.push(t); return t; }
+function every(fn, ms) { const t = setInterval(fn, ms); timers.push(t); return t; }
+function clearAll() { timers.forEach(t => { clearTimeout(t); clearInterval(t); }); timers = []; keyHandler = null; }
+document.addEventListener("keydown", e => { if (keyHandler && !e.target.matches("input[type=range]")) keyHandler(e); });
+function show(html) { stage.innerHTML = `<div class="panel enter">${html}</div>`; return stage.firstChild; }
+function setRound(t) { $("roundName").textContent = t; }
+
+function addScore(d, round) {
+  if (!d) return;
+  score = Math.max(0, score + d); if (round !== undefined) roundScores[round] += d;
+  const el = $("score"); el.textContent = score;
+  el.classList.remove("up", "down"); void el.offsetWidth; el.classList.add(d > 0 ? "up" : "down");
+  updateMedalBar();
+}
+(function buildMedalBar() {
+  const bar = $("medalbar"), max = MEDALS[2].at;
+  MEDALS.forEach(m => { const i = document.createElement("i"); i.style.left = (m.at / max * 100) + "%"; i.style.background = m.c; i.title = `${m.name}: ${m.at}`; bar.appendChild(i); });
+})();
+function updateMedalBar() { $("medalFill").style.width = Math.min(100, score / MEDALS[2].at * 100) + "%"; }
+
+/* =================== SOUND =================== */
+let muted = load("bokMuted") === "1", actx;
+function ac() { if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)(); if (actx.state === "suspended") actx.resume(); return actx; }
+function tone(f, start, dur, type = "sine", vol = .14, slideTo) {
+  if (muted) return;
+  const c = ac(), o = c.createOscillator(), g = c.createGain(), t = c.currentTime + start;
+  o.type = type; o.frequency.setValueAtTime(f, t); if (slideTo) o.frequency.exponentialRampToValueAtTime(slideTo, t + dur);
+  g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vol, t + .01); g.gain.exponentialRampToValueAtTime(.0001, t + dur);
+  o.connect(g).connect(c.destination); o.start(t); o.stop(t + dur + .05);
+}
+function noiseBurst(dur, vol, freq, start = 0, claps = 0) {
+  if (muted) return;
+  const c = ac(), len = Math.floor(c.sampleRate * dur), buf = c.createBuffer(1, len, c.sampleRate), d = buf.getChannelData(0);
+  if (claps) {
+    const env = new Float32Array(len);
+    for (let k = 0; k < dur * claps; k++) { const at = Math.floor(Math.random() * len), dl = Math.floor(c.sampleRate * .02), amp = .4 + Math.random() * .6; for (let j = 0; j < dl && at + j < len; j++) env[at + j] += amp * Math.pow(1 - j / dl, 4); }
+    for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.min(env[i], 1) * (1 - i / len);
+  } else for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / len);
+  const s = c.createBufferSource(); s.buffer = buf; const f = c.createBiquadFilter(); f.type = "bandpass"; f.frequency.value = freq; f.Q.value = .8;
+  const g = c.createGain(); g.gain.value = vol; s.connect(f).connect(g).connect(c.destination); s.start(c.currentTime + start);
+}
+let flatOsc = null;
+const sfx = {
+  lubdub() { tone(70, 0, .16, "sine", .5, 40); tone(90, .2, .13, "sine", .4, 50); },
+  beep() { tone(1000, 0, .09, "sine", .09); },
+  right() { [523, 659, 784, 1047].forEach((f, i) => tone(f, i * .07, .35, "triangle", .12)); },
+  wrong() { tone(170, 0, .4, "square", .09, 110); },
+  tick() { tone(1400, 0, .03, "square", .05); },
+  select() { tone(660, 0, .07, "triangle", .08); },
+  sting() { tone(196, 0, .5, "sawtooth", .06); tone(262, .12, .5, "sawtooth", .06); tone(392, .24, .9, "triangle", .1); tone(523, .24, .9, "triangle", .08); },
+  fanfare() { [392, 523, 659, 784, 659, 784, 1047].forEach((f, i) => tone(f, i * .12, .4, "square", .06)); tone(1047, .85, 1.1, "triangle", .12); noiseBurst(2.6, .45, 1800, .7, 45); },
+  applause(d = 2) { noiseBurst(d, .45, 1800, 0, 45); },
+  alarm() { for (let i = 0; i < 3; i++) { tone(880, i * .28, .14, "square", .07); tone(660, i * .28 + .14, .14, "square", .07); } },
+  whoosh() { noiseBurst(.4, .25, 900); },
+  flatStart() { if (muted) return; const c = ac(); flatOsc = c.createOscillator(); const g = c.createGain(); flatOsc.frequency.value = 1000; g.gain.value = .06; flatOsc.connect(g).connect(c.destination); flatOsc.start(); },
+  flatStop() { if (flatOsc) { try { flatOsc.stop(); } catch (e) {} flatOsc = null; } }
+};
+function updateMute() { $("muteBtn").textContent = muted ? "🔇" : "🔊"; $("muteBtn").setAttribute("aria-label", muted ? "Turn sound on" : "Mute sound"); }
+updateMute();
+$("muteBtn").addEventListener("click", () => { muted = !muted; save("bokMuted", muted ? "1" : "0"); if (muted) sfx.flatStop(); updateMute(); });
+if (!document.fullscreenEnabled) $("fsBtn").classList.add("hidden");
+$("fsBtn").addEventListener("click", () => { try { document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen(); } catch (e) {} });
+
+/* =================== ECG MONITOR =================== */
+const ecg = { bpm: 72, flat: false, spike: 0, beep: false, heart: false };
+const ecgC = $("ecg"), ex = ecgC.getContext("2d");
+let ecgW = 0, ecgH = 76, ex0 = 0, ey0 = null, phase = 0, lastT = 0, traceCol = "#000", stripCol = "#fff";
+function sizeEcg() { const r = (devicePixelRatio || 1) * Math.max(1, S); ecgW = ecgC.clientWidth; ecgC.width = ecgW * r; ecgC.height = ecgH * r; ex.setTransform(r, 0, 0, r, 0, 0); readEcgColours(); ex.clearRect(0, 0, ecgW, ecgH); ex0 = 0; ey0 = null; }
+function readEcgColours() { const s = getComputedStyle(document.documentElement); traceCol = s.getPropertyValue("--trace").trim(); stripCol = s.getPropertyValue("--strip").trim(); }
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", sizeEcg);
+addEventListener("resize", sizeEcg);
+const gauss = (x, m, w) => Math.exp(-((x - m) ** 2) / (2 * w * w));
+function shape(p) { return .12 * gauss(p, .1, .022) - .12 * gauss(p, .2, .008) + 1 * gauss(p, .225, .01) - .28 * gauss(p, .25, .01) + .26 * gauss(p, .45, .04); }
+function setBpm(b) { ecg.bpm = b; $("bpm").textContent = ecg.flat ? "0" : Math.round(b); }
+function ecgLoop(t) {
+  const dt = Math.min(.05, (t - lastT) / 1000 || 0); lastT = t;
+  const prevP = phase;
+  if (!ecg.flat) { phase += dt * ecg.bpm / 60; if (phase >= 1) phase -= 1; }
+  if (!ecg.flat && prevP < .225 && phase >= .225) { if (ecg.beep) sfx.beep(); if (ecg.heart) sfx.lubdub(); }
+  if (ecg.spike > 0) ecg.spike -= dt;
+  if (!reduceMotion) {
+    const pxps = Math.max(160, ecgW / 4.5);
+    let x = ex0 + dt * pxps;
+    const amp = ecgH * .36 * (ecg.spike > 0 ? 1.45 : 1);
+    const y = ecgH * .62 - (ecg.flat ? 0 : shape(phase)) * amp;
+    if (x > ecgW) { x = 0; ey0 = null; }
+    ex.clearRect(x, 0, 26, ecgH);
+    if (ey0 !== null) { ex.strokeStyle = ecg.flat ? getComputedStyle(document.documentElement).getPropertyValue("--artery").trim() : traceCol; ex.lineWidth = 2.4; ex.lineJoin = "round"; ex.shadowBlur = 10; ex.shadowColor = ex.strokeStyle; ex.beginPath(); ex.moveTo(ex0, ey0); ex.lineTo(x, y); ex.stroke(); }
+    ex0 = x; ey0 = y;
+  }
+  requestAnimationFrame(ecgLoop);
+}
+sizeEcg();
+if (reduceMotion) { ex.strokeStyle = traceCol; ex.lineWidth = 2.4; ex.beginPath(); for (let x = 0; x < ecgW; x++) { const p = (x / 180) % 1; const y = ecgH * .62 - shape(p) * ecgH * .36; x ? ex.lineTo(x, y) : ex.moveTo(x, y); } ex.stroke(); }
+requestAnimationFrame(ecgLoop);
+function spike() { ecg.spike = .9; }
+let flatTimer = null;
+function flatline(ms = 2200) { clearTimeout(flatTimer); sfx.flatStop(); ecg.flat = true; setBpm(0); sfx.flatStart(); flatTimer = setTimeout(() => { sfx.flatStop(); ecg.flat = false; setBpm(72); }, ms); }
+
+/* =================== CONFETTI =================== */
+const cv = $("confetti"), cx = cv.getContext("2d"); let bits = [], cRun = false;
+function sizeCv() { const r = devicePixelRatio || 1; cv.width = innerWidth * r; cv.height = innerHeight * r; cx.setTransform(r, 0, 0, r, 0, 0); }
+sizeCv(); addEventListener("resize", sizeCv);
+function burst(x = innerWidth / 2, y = innerHeight / 2.5, n = 100) {
+  if (reduceMotion) return;
+  const s = getComputedStyle(document.documentElement), cols = ["--artery", "--vein", "--gold", "--good"].map(v => s.getPropertyValue(v).trim()).concat(["#ffffff"]);
+  for (let i = 0; i < n; i++) { const a = Math.random() * Math.PI * 2, sp = 3 + Math.random() * 9; bits.push({ x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 5, r: Math.random() * 6, vr: (Math.random() - .5) * .3, w: 6 + Math.random() * 7, h: 3 + Math.random() * 4, c: cols[i % cols.length], life: 1 }); }
+  if (!cRun) { cRun = true; requestAnimationFrame(cStep); }
+}
+function cStep() {
+  cx.clearRect(0, 0, innerWidth, innerHeight); bits = bits.filter(b => b.life > 0);
+  for (const b of bits) { b.vy += .24; b.vx *= .985; b.x += b.vx; b.y += b.vy; b.r += b.vr; b.life -= .008; cx.save(); cx.globalAlpha = Math.max(0, b.life); cx.translate(b.x, b.y); cx.rotate(b.r); cx.fillStyle = b.c; cx.fillRect(-b.w / 2, -b.h / 2, b.w, b.h); cx.restore(); }
+  if (bits.length) requestAnimationFrame(cStep); else { cRun = false; cx.clearRect(0, 0, innerWidth, innerHeight); }
+}
+
+/* =================== SHARED: ROUND INTRO =================== */
+function roundIntro(n, name, host, btn, next) {
+  clearAll(); setRound(`Round ${n} of 5: ${name}`); setBpm(72); ecg.heart = false; ecg.beep = false;
+  show(`<div class="center"><p class="kicker">Round ${n} of 5</p><h2 class="title-l display">${esc(name)}</h2><p class="host">${host}</p><div class="row c mt"><button class="btn go" id="goBtn">${esc(btn)}</button></div></div>`);
+  sfx.sting(); $("goBtn").focus({ preventScroll: true });
+  $("goBtn").addEventListener("click", () => { ac(); next(); });
+}
+
+/* =================== SHARED: MULTIPLE CHOICE =================== */
+function timerRing(sec) {
+  const C = 2 * Math.PI * 26;
+  return { html: `<div class="timer" id="tmr"><svg viewBox="0 0 60 60"><circle class="bg" cx="30" cy="30" r="26"/><circle class="fg" id="tmrFg" cx="30" cy="30" r="26" stroke-dasharray="${C}" stroke-dashoffset="0"/></svg><b id="tmrNum">${sec}</b></div>`,
+    set(left) { const fg = $("tmrFg"); if (!fg) return; fg.style.strokeDashoffset = C * (1 - left / sec); $("tmrNum").textContent = left; $("tmr").classList.toggle("low", left <= 5); } };
+}
+function askMC({ cat, q, o, a, why, seconds = 25, onDone, beepCountdown = false }) {
+  const order = shuffle(o.map((t, i) => i));
+  const ring = timerRing(seconds);
+  const el = show(`<div class="qhead"><span class="qcat">${esc(cat)}</span>${ring.html}</div>
+    <div class="question">${esc(q)}</div>
+    <div class="opts" id="opts">${order.map((oi, k) => `<button class="opt" data-i="${oi}"><span class="k">${"ABCD"[k]}</span><span>${esc(o[oi])}</span></button>`).join("")}</div>
+    <div class="row mt" id="lockRow"><button class="btn go" id="lockBtn" disabled>Lock it in</button><span class="small">Talk it over, then lock in your team’s answer.</span></div>
+    <div id="whyBox"></div>`);
+  let chosen = null, done = false, left = seconds;
+  const btns = [...el.querySelectorAll(".opt")];
+  const pick = b => { if (done) return; btns.forEach(x => x.classList.remove("sel")); b.classList.add("sel"); chosen = +b.dataset.i; $("lockBtn").disabled = false; sfx.select(); };
+  btns.forEach(b => b.addEventListener("click", () => pick(b)));
+  const finish = () => {
+    if (done) return; done = true; clearInterval(tm); ecg.beep = false;
+    const ok = chosen === a;
+    btns.forEach(b => { b.disabled = true; const i = +b.dataset.i; if (i === a) b.classList.add("right"); else if (i === chosen) b.classList.add("wrong"); });
+    $("lockRow").remove();
+    $("whyBox").innerHTML = `<div class="why"><strong class="${ok ? "g" : "b"}"></strong><span></span></div><div class="row mt"><button class="btn go" id="contBtn">Continue</button></div>`;
+    const w = $("whyBox").querySelector("strong");
+    w.textContent = ok ? ["Correct!", "Spot on!", "That’s right!", "Textbook!"][Math.floor(Math.random() * 4)] : chosen === null ? "Out of time!" : "Not this time.";
+    $("whyBox").querySelector("span").textContent = why;
+    $("contBtn").focus({ preventScroll: true });
+    $("contBtn").addEventListener("click", () => onDone(ok));
+    onDone.reveal && onDone.reveal(ok);
+    keyHandler = null;
+    return ok;
+  };
+  $("lockBtn").addEventListener("click", () => resolve());
+  let resolve = () => { const ok = finish(); if (resultHook) resultHook(ok); };
+  let resultHook = null;
+  const tm = setInterval(() => {
+    left--; ring.set(left);
+    if (beepCountdown) sfx.beep(); else if (left <= 5 && left > 0) sfx.tick();
+    if (left <= 0) resolve();
+  }, 1000); timers.push(tm);
+  keyHandler = e => { const k = e.key.toUpperCase(); const idx = "ABCD".indexOf(k) >= 0 ? "ABCD".indexOf(k) : "1234".indexOf(k); if (idx >= 0 && btns[idx]) pick(btns[idx]); if (e.key === "Enter" && chosen !== null && !done) resolve(); };
+  return { onResult(fn) { resultHook = fn; } };
+}
+
+/* =================== TITLE =================== */
+function titleScreen() {
+  clearAll(); score = 0; roundScores = [0, 0, 0, 0, 0]; $("score").textContent = "0"; updateMedalBar(); setRound("Cardiac Lab Special"); setBpm(72);
+  const best = load("bokBestCardiac");
+  show(`<div class="center">
+    <h1 class="brand" aria-label="Human Systems Live! Cardiac Lab Special">
+      <span class="brand-top display">Human Systems</span>
+      <span class="brand-academy">Academy</span>
+      <span class="live-plate"><span class="lights" aria-hidden="true"><i></i><i></i><i></i><i></i></span><span class="display">Live!</span><span class="lights" aria-hidden="true"><i></i><i></i><i></i><i></i></span></span>
+      <span class="special"><svg viewBox="0 0 64 24" aria-hidden="true"><path d="M0 12 H22 L26 4 L30 20 L34 2 L38 16 L42 12 H64"/></svg><span class="display">Cardiac Lab Special</span><svg viewBox="0 0 64 24" aria-hidden="true"><path d="M0 12 H22 L26 4 L30 20 L34 2 L38 16 L42 12 H64"/></svg></span>
+    </h1>
+    <p class="host">One team, five rounds, all about the heart and blood. Work together, talk it through, and chase the gold.</p>
+    <div class="medals-key">${MEDALS.map(m => `<span><i class="dot" style="background:${m.c}"></i>${m.name}: ${m.at.toLocaleString()}</span>`).join("")}</div>
+    ${best ? `<p class="small">Best team score: ${(+best).toLocaleString()}</p>` : ""}
+    <div class="row c mt"><button class="btn go" id="startBtn">Start the show</button></div>
+    <p class="small mt">Best on a big screen with the sound up. Keys 1 to 4 pick answers, Enter locks in.</p></div>`);
+  $("startBtn").addEventListener("click", () => { ac(); sfx.fanfare(); spike(); r1Intro(); });
+}
+
+/* =================== ROUND 1: PULSE CHECK =================== */
+function r1Intro() {
+  roundIntro(1, "Pulse Check", "True or false? You have 60 seconds to get through as many as you can. Shout your answers, and listen to that heartbeat speed up as the clock runs down. 100 points for every right answer.", "Start the clock", r1Play);
+}
+function r1Play() {
+  clearAll();
+  const pool = shuffle(PULSE); let i = 0, left = 60, right = 0, asked = 0, busy = false;
+  const el = show(`<div class="pc-top"><span class="pc-clock display" id="pcClock">60</span><span class="pc-count" id="pcCount">0 correct</span></div>
+    <div class="question" id="pcQ" style="min-height:5.5rem"></div>
+    <div class="tf"><button class="opt" id="tBtn">True</button><button class="opt" id="fBtn">False</button></div>
+    <div class="flashfix" id="pcFix" aria-live="polite"></div>
+    <p class="small center">Keyboard: T for true, F for false.</p>`);
+  ecg.heart = true; setBpm(80);
+  const showQ = () => { $("pcQ").textContent = pool[i][0]; $("pcFix").textContent = ""; ["tBtn", "fBtn"].forEach(id => { $(id).classList.remove("right", "wrong"); $(id).disabled = false; }); };
+  const answer = val => {
+    if (busy || left <= 0) return; busy = true; asked++;
+    const [, truth, fix] = pool[i], ok = val === truth;
+    $(val ? "tBtn" : "fBtn").classList.add(ok ? "right" : "wrong");
+    if (!ok) $(truth ? "tBtn" : "fBtn").classList.add("right");
+    $("tBtn").disabled = $("fBtn").disabled = true;
+    const fx = $("pcFix"); fx.textContent = (ok ? "✓ " : "✗ ") + fix; fx.style.color = ok ? "var(--good)" : "var(--bad)";
+    if (ok) { right++; addScore(100, 0); sfx.right(); spike(); } else sfx.wrong();
+    $("pcCount").textContent = `${right} correct`;
+    later(() => { busy = false; i++; if (i >= pool.length) end(); else showQ(); }, ok ? 900 : 1700);
+  };
+  $("tBtn").addEventListener("click", () => answer(true)); $("fBtn").addEventListener("click", () => answer(false));
+  keyHandler = e => { const k = e.key.toLowerCase(); if (k === "t" || e.key === "ArrowLeft") answer(true); if (k === "f" || e.key === "ArrowRight") answer(false); };
+  showQ();
+  every(() => { left--; $("pcClock").textContent = left; setBpm(80 + (60 - left) * 1.6); if (left <= 0) end(); }, 1000);
+  let ended = false;
+  function end() {
+    if (ended) return; ended = true; clearAll(); ecg.heart = false; setBpm(72); sfx.alarm();
+    summary(1, "Pulse Check", `${right} correct out of ${asked} answered.`, roundScores[0], r2Intro);
+  }
+}
+
+/* =================== ROUND SUMMARY =================== */
+function summary(n, name, line, pts, next) {
+  clearAll();
+  show(`<div class="center"><p class="kicker">End of round ${n}</p><h2 class="title-l display">${esc(name)}</h2>
+    <p class="host">${esc(line)}</p><p class="avail display">${pts >= 0 ? "+" : ""}${pts.toLocaleString()} points</p>
+    <p class="small">Team total: ${score.toLocaleString()}${nextMedalLine()}</p>
+    <div class="row c mt"><button class="btn go" id="nextBtn">${n === 5 ? "See the results" : "On to round " + (n + 1)}</button></div></div>`);
+  if (pts > 0) sfx.applause(1.6);
+  $("nextBtn").focus({ preventScroll: true }); $("nextBtn").addEventListener("click", next);
+}
+function nextMedalLine() { const m = MEDALS.find(m => score < m.at); return m ? `. ${(m.at - score).toLocaleString()} more for ${m.name}.` : ". Gold secured!"; }
+
+/* =================== ROUND 2: BODY BOARD =================== */
+let boardUsed, picksLeft, vitalKey;
+function r2Intro() {
+  boardUsed = new Set(); picksLeft = 6;
+  const pool = []; BOARD.forEach((c, ci) => c.qs.forEach((q, qi) => { if (q.v >= 200) pool.push(ci + "-" + qi); }));
+  vitalKey = pool[Math.floor(Math.random() * pool.length)];
+  roundIntro(2, "The Body Board", "Four categories, twelve tiles, but only six picks, so choose wisely. Bigger numbers mean harder questions. Somewhere on the board hides a Vital Sign tile, where you can wager your own points.", "Show the board", r2Board);
+}
+function r2Board() {
+  clearAll(); setRound("Round 2 of 5: The Body Board");
+  if (picksLeft <= 0) { summary(2, "The Body Board", "That’s your six picks used.", roundScores[1], r3Intro); return; }
+  let html = `<div class="row" style="justify-content:space-between;margin-bottom:1rem"><span class="qcat">Pick a tile</span><span class="picks">${picksLeft} ${picksLeft === 1 ? "pick" : "picks"} left</span></div><div class="board">`;
+  BOARD.forEach(c => html += `<div class="cat">${esc(c.cat)}</div>`);
+  [0, 1, 2].forEach(qi => BOARD.forEach((c, ci) => { const key = ci + "-" + qi, used = boardUsed.has(key); html += `<button class="tile" data-k="${key}" ${used ? "disabled aria-label='Used'" : `aria-label="${esc(c.cat)} for ${c.qs[qi].v}"`}>${c.qs[qi].v}</button>`; }));
+  html += `</div>`;
+  const el = show(html);
+  el.querySelectorAll(".tile:not(:disabled)").forEach(t => t.addEventListener("click", () => { sfx.select(); r2Question(t.dataset.k); }));
+  const first = el.querySelector(".tile:not(:disabled)"); if (first) first.focus({ preventScroll: true });
+}
+function r2Question(key) {
+  clearAll(); boardUsed.add(key); picksLeft--;
+  const [ci, qi] = key.split("-").map(Number), c = BOARD[ci], q = c.qs[qi];
+  const run = stake => {
+    const m = askMC({ cat: stake !== null ? `Vital Sign: ${c.cat}, wagering ${stake}` : `${c.cat} for ${q.v}`, q: q.q, o: q.o, a: q.a, why: q.why, seconds: 25, onDone: () => r2Board() });
+    m.onResult(ok => {
+      const pts = stake !== null ? (ok ? stake : -stake) : (ok ? q.v : 0);
+      if (pts) addScore(pts, 1);
+      if (ok) { sfx.right(); spike(); if (stake) { burst(); sfx.applause(1.5); } } else { sfx.wrong(); if (stake) flatline(1600); }
+    });
+  };
+  if (key === vitalKey) wagerScreen("Vital Sign!", `You’ve found the Vital Sign tile in ${c.cat}. How many points will your team risk?`, Math.max(score, 500), run);
+  else run(null);
+}
+function wagerScreen(title, text, max, cb) {
+  clearAll(); sfx.sting(); spike();
+  const step = 50, start = Math.round(Math.min(max, Math.max(step, max / 2)) / step) * step;
+  show(`<div class="center"><div class="splash display">${esc(title)}</div><p class="host">${esc(text)}</p>
+    <div class="wager"><div class="amt display" id="amt">${start}</div>
+    <input type="range" id="wg" min="0" max="${max}" step="${step}" value="${start}" aria-label="Wager">
+    <div class="row c"><button class="chip" data-f=".25">A quarter</button><button class="chip" data-f=".5">Half</button><button class="chip" data-f="1">Everything</button></div>
+    <p class="small">You can wager up to ${max.toLocaleString()}${score < 500 ? " (we’ve topped you up to 500 so there’s something to play for)" : ""}.</p>
+    <button class="btn go" id="wgBtn">Lock in the wager</button></div></div>`);
+  const wg = $("wg"), upd = () => $("amt").textContent = (+wg.value).toLocaleString();
+  wg.addEventListener("input", () => { upd(); tone(300 + wg.value / max * 600, 0, .04, "triangle", .05); });
+  document.querySelectorAll(".chip").forEach(ch => ch.addEventListener("click", () => { wg.value = Math.round(max * ch.dataset.f / step) * step; upd(); sfx.select(); }));
+  $("wgBtn").addEventListener("click", () => cb(+wg.value));
+}
+
+/* =================== ROUND 3: RACE THE BLOODSTREAM =================== */
+function r3Intro() {
+  roundIntro(3, "Race the Bloodstream", "Blood has just come back from the body. Build its route through the heart and lungs and back out again. Tap the stops in order, then send the blood cell on its way and watch where it ends up. 100 points per correct stop, plus a speed bonus for a perfect route.", "Start building", r3Play);
+}
+function r3Play() {
+  clearAll();
+  const pool = shuffle(ROUTE); let placed = [], left = 90, sent = false;
+  const el = show(`<div class="qhead"><span class="qcat">Tap the stops in order</span><div class="timer" id="tmr"><svg viewBox="0 0 60 60"><circle class="bg" cx="30" cy="30" r="26"/><circle class="fg" id="tmrFg" cx="30" cy="30" r="26" stroke-dasharray="${2 * Math.PI * 26}" stroke-dashoffset="0"/></svg><b id="tmrNum">90</b></div></div>
+    <div class="route-wrap"><div class="track" id="track"></div></div>
+    <div class="pool" id="pool"></div>
+    <div class="legend"><span><i class="dot" style="background:var(--vein)"></i>Oxygen-poor blood</span><span><i class="dot" style="background:var(--artery)"></i>Oxygen-rich blood</span><span>Tap a placed stop to send it back.</span></div>
+    <div class="row mt" id="r3Actions"><button class="btn go" id="sendBtn" disabled>Send the blood!</button><button class="btn" id="resetBtn">Clear route</button></div>
+    <div id="r3Result"></div>`);
+  const ringC = 2 * Math.PI * 26;
+  const draw = () => {
+    const tr = $("track"); tr.innerHTML = "";
+    const add = (txt, fixed, idx) => {
+      if (tr.children.length) { const a = document.createElement("span"); a.className = "arrow"; a.textContent = "→"; tr.appendChild(a); }
+      const b = document.createElement("button"); b.className = "station" + (fixed ? " fixed" : ""); b.textContent = txt;
+      if (fixed) b.tabIndex = -1; else b.addEventListener("click", () => { if (sent) return; placed.splice(idx, 1); sfx.select(); draw(); });
+      tr.appendChild(b); return b;
+    };
+    add("Body", true);
+    placed.forEach((p, i) => add(p, false, i));
+    if (placed.length === ROUTE.length) add("Body", true);
+    const pl = $("pool"); pl.innerHTML = "";
+    pool.filter(p => !placed.includes(p)).forEach(p => { const b = document.createElement("button"); b.className = "station"; b.textContent = p; b.addEventListener("click", () => { if (sent) return; placed.push(p); sfx.select(); draw(); }); pl.appendChild(b); });
+    $("sendBtn").disabled = placed.length !== ROUTE.length;
+  };
+  draw();
+  $("resetBtn").addEventListener("click", () => { if (!sent) { placed = []; draw(); } });
+  const tm = every(() => {
+    left--; $("tmrFg").style.strokeDashoffset = ringC * (1 - left / 90); $("tmrNum").textContent = left; $("tmr").classList.toggle("low", left <= 10);
+    if (left <= 10 && left > 0) sfx.tick();
+    if (left <= 0) { clearInterval(tm); if (!sent) { while (placed.length < ROUTE.length) placed.push(pool.find(p => !placed.includes(p))); draw(); send(); } }
+  }, 1000);
+  $("sendBtn").addEventListener("click", () => { clearInterval(tm); send(); });
+  function send() {
+    if (sent) return; sent = true; $("r3Actions").remove(); $("pool").remove();
+    const stations = [...$("track").querySelectorAll(".station")];
+    const wrap = document.querySelector(".route-wrap");
+    const cell = document.createElement("div"); cell.className = "cell"; wrap.appendChild(cell);
+    const posOf = s => { const r = s.getBoundingClientRect(), w = wrap.getBoundingClientRect(); return [(r.left - w.left + r.width / 2) / S, (r.top - w.top) / S - 4]; };
+    const [x0, y0] = posOf(stations[0]); cell.style.left = x0 + "px"; cell.style.top = y0 + "px";
+    let k = 1, correct = 0; ecg.heart = true; setBpm(90);
+    const stepT = reduceMotion ? 250 : 650;
+    const go = () => {
+      if (k > ROUTE.length) { finishRoute(true); return; }
+      const s = stations[k]; const [x, y] = posOf(s); cell.style.left = x + "px"; cell.style.top = y + "px";
+      later(() => {
+        if (placed[k - 1] === ROUTE[k - 1]) {
+          s.classList.add("ok"); correct++; tone(440 + k * 60, 0, .15, "triangle", .1);
+          if (ROUTE[k - 1] === "Lungs") { cell.classList.add("oxy"); sfx.whoosh(); }
+          k++; later(go, stepT * .5);
+        } else { s.classList.add("bad"); sfx.alarm(); finishRoute(false); }
+      }, stepT);
+    };
+    later(go, 400);
+    function finishRoute(perfect) {
+      ecg.heart = false; setBpm(72);
+      const bonus = perfect ? Math.round(left / 90 * 300 / 10) * 10 : 0, pts = correct * 100 + bonus;
+      if (perfect) { const [x, y] = posOf(stations[stations.length - 1]); cell.style.left = x + "px"; cell.style.top = y + "px"; sfx.right(); later(() => { sfx.applause(2); burst(); }, 300); spike(); }
+      addScore(pts, 2);
+      $("r3Result").innerHTML = `<div class="why"><strong class="${perfect ? "g" : "b"}"></strong><span></span><p class="small" style="margin:.6rem 0 0">The full route: Body → ${ROUTE.join(" → ")} → Body. The right side pumps blood to the lungs to pick up oxygen; the left side pumps it to the body.</p></div><div class="row mt"><button class="btn go" id="r3Next">Continue</button></div>`;
+      $("r3Result").querySelector("strong").textContent = perfect ? `A perfect circuit! ${correct} stops plus a ${bonus}-point speed bonus.` : `The blood cell got stuck after ${correct} correct ${correct === 1 ? "stop" : "stops"}.`;
+      $("r3Result").querySelector("span").textContent = perfect ? "" : `Stop ${correct + 1} should have been the ${ROUTE[correct].toLowerCase()}.`;
+      $("r3Next").focus({ preventScroll: true });
+      $("r3Next").addEventListener("click", () => summary(3, "Race the Bloodstream", perfect ? "A perfect route!" : `${correct} of ${ROUTE.length} stops correct.`, roundScores[2], r4Intro));
+    }
+  }
+}
+
+/* =================== ROUND 4: DIAGNOSIS =================== */
+function r4Intro() {
+  roundIntro(4, "Diagnosis", "Two patients, revealed one clue at a time. Guess early for up to 500 points, or reveal another clue and play it safe. Every new clue, or wrong guess, costs 100.", "Meet the first patient", () => r4Case(0));
+}
+function r4Case(n) {
+  clearAll(); const c = CASES[n]; let shown = 1, avail = 500, done = false;
+  const order = shuffle(c.o.map((t, i) => i));
+  const el = show(`<div class="qhead"><span class="qcat">Patient ${n + 1} of ${CASES.length}</span><span><span class="small">Points available</span><br><b class="avail display" id="avail">500</b></span></div>
+    <div class="case"><div class="chart"><h3>Patient notes</h3><div id="clues"></div><button class="btn mt" id="clueBtn">Reveal next clue (−100)</button></div>
+    <div><p class="qcat" style="margin-top:0">What’s the diagnosis?</p><div class="opts" style="grid-template-columns:1fr" id="opts">${order.map((oi, k) => `<button class="opt" data-i="${oi}"><span class="k">${"ABCD"[k]}</span><span>${esc(c.o[oi])}</span></button>`).join("")}</div>
+    <div class="row mt" id="lockRow"><button class="btn go" id="lockBtn" disabled>Lock it in</button></div><div id="whyBox"></div></div></div>`);
+  const cl = $("clues");
+  const addClue = i => { const d = document.createElement("div"); d.className = "clue"; d.innerHTML = `<b>Clue ${i + 1}</b><span></span>`; d.lastChild.textContent = c.clues[i]; cl.appendChild(d); };
+  addClue(0);
+  const setAvail = () => { $("avail").textContent = avail; };
+  $("clueBtn").addEventListener("click", () => { if (done || shown >= c.clues.length) return; addClue(shown); shown++; avail = Math.max(100, avail - 100); setAvail(); sfx.whoosh(); if (shown >= c.clues.length) $("clueBtn").disabled = true; });
+  const btns = [...el.querySelectorAll(".opt")]; let chosen = null;
+  const pick = b => { if (done || b.disabled) return; btns.forEach(x => x.classList.remove("sel")); b.classList.add("sel"); chosen = +b.dataset.i; $("lockBtn").disabled = false; sfx.select(); };
+  btns.forEach(b => b.addEventListener("click", () => pick(b)));
+  const lock = () => {
+    if (done || chosen === null) return;
+    const b = btns.find(x => +x.dataset.i === chosen);
+    if (chosen === c.a) {
+      done = true; b.classList.remove("sel"); b.classList.add("right"); btns.forEach(x => { x.disabled = true; if (x !== b) x.style.display = "none"; });
+      addScore(avail, 3); sfx.right(); spike(); later(() => sfx.applause(1.5), 250);
+      while (shown < c.clues.length) { addClue(shown); shown++; }
+      $("clueBtn").remove(); $("lockRow").remove();
+      $("whyBox").innerHTML = `<div class="why"><strong class="g"></strong><span></span></div><div class="row mt"><button class="btn go" id="cNext">${n + 1 < CASES.length ? "Next patient" : "Continue"}</button></div>`;
+      $("whyBox").querySelector("strong").textContent = `Correct! +${avail} points.`;
+      $("whyBox").querySelector("span").textContent = c.why;
+      $("cNext").focus({ preventScroll: true });
+      $("cNext").addEventListener("click", () => n + 1 < CASES.length ? r4Case(n + 1) : summary(4, "Diagnosis", "Both patients seen.", roundScores[3], r5Intro));
+    } else {
+      b.classList.remove("sel"); b.classList.add("wrong"); later(() => { b.classList.remove("wrong"); b.classList.add("out"); }, 450); b.disabled = true;
+      chosen = null; $("lockBtn").disabled = true; sfx.wrong();
+      avail = Math.max(100, avail - 100); setAvail();
+    }
+  };
+  $("lockBtn").addEventListener("click", lock);
+  keyHandler = e => { const k = e.key.toUpperCase(); const idx = "ABCD".indexOf(k) >= 0 ? "ABCD".indexOf(k) : "1234".indexOf(k); if (idx >= 0 && btns[idx]) pick(btns[idx]); if (e.key === "Enter") lock(); };
+}
+
+/* =================== ROUND 5: CODE RED =================== */
+function r5Intro() {
+  roundIntro(5, "Code Red", `One final question. You’ll see the category, then decide how much of your ${score.toLocaleString()} points to risk. Get it right and you win your wager. Get it wrong and you lose it.`, "Reveal the category", () => {
+    wagerScreen(FINAL.cat, "That’s your final category. How much will your team risk?", Math.max(score, 500), stake => r5Question(stake));
+  });
+}
+function r5Question(stake) {
+  $("dim").classList.add("on"); setBpm(110); ecg.beep = true;
+  const m = askMC({ cat: `Code Red: wagering ${stake.toLocaleString()}`, q: FINAL.q, o: FINAL.o, a: FINAL.a, why: FINAL.why, seconds: 30, beepCountdown: false, onDone: () => { $("dim").classList.remove("on"); results(); } });
+  stage.firstChild.style.position = "relative"; stage.firstChild.style.zIndex = 6;
+  m.onResult(ok => {
+    ecg.beep = false; $("dim").classList.remove("on");
+    if (ok) { addScore(stake, 4); setBpm(72); sfx.right(); spike(); later(() => { sfx.applause(2.5); burst(); }, 300); }
+    else { addScore(-stake, 4); flatline(2400); sfx.wrong(); }
+  });
+}
+
+/* =================== RESULTS =================== */
+function results() {
+  clearAll(); setRound("Final results"); setBpm(72);
+  const medal = [...MEDALS].reverse().find(m => score >= m.at);
+  const prev = +(load("bokBestCardiac") || 0), isBest = score > prev;
+  if (isBest) save("bokBestCardiac", score);
+  const names = ["Pulse Check", "The Body Board", "Race the Bloodstream", "Diagnosis", "Code Red"];
+  show(`<div class="center"><p class="kicker">That’s the show!</p><h2 class="title-l display">Final score: <span id="fin">0</span></h2>
+    ${medal ? `<div class="medal" style="background:${medal.c}">${medal.name}</div><p class="host">${medal.name === "Gold" ? "A gold-medal performance. This team really knows its hearts." : medal.name === "Silver" ? "A silver medal! Strong work. Gold is within reach next time." : "A bronze medal. A solid start; can your team go for silver?"}</p>`
+      : `<p class="host">No medal this time, but every round is a chance to learn. ${(MEDALS[0].at - score).toLocaleString()} more points would have earned bronze.</p>`}
+    ${isBest && prev ? `<p class="kicker">New best team score!</p>` : ""}
+    <div class="recap">${names.map((n, i) => `<div><span class="small">${n}</span><b>${roundScores[i] >= 0 ? "" : "−"}${Math.abs(roundScores[i]).toLocaleString()}</b></div>`).join("")}</div>
+    <div class="row c mt"><button class="btn go" id="againBtn">Play again</button></div></div>`);
+  let s = 0; const stp = Math.max(25, Math.round(score / 50));
+  const t = every(() => { s = Math.min(score, s + stp); $("fin").textContent = s.toLocaleString(); if (s >= score) clearInterval(t); }, reduceMotion ? 1 : 30);
+  later(() => { sfx.fanfare(); if (medal) { burst(innerWidth * .3, innerHeight * .4, 110); later(() => burst(innerWidth * .7, innerHeight * .4, 110), 300); } }, 600);
+  $("againBtn").addEventListener("click", titleScreen);
+}
+
+titleScreen();
+</script>
+</body>
+</html>
